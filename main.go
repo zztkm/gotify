@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,7 +22,29 @@ const (
 	revision = "HEAD"
 )
 
-var playerState *spotify.PlayerState
+const redirectURI = "http://localhost:8080/callback"
+
+// We'll want these variables sooner rather than later
+var (
+	client      *spotify.Client
+	playerState *spotify.PlayerState
+)
+
+var html = `
+<br/>
+<a href="/player/play">Play</a><br/>
+<a href="/player/pause">Pause</a><br/>
+<a href="/player/next">Next track</a><br/>
+<a href="/player/previous">Previous Track</a><br/>
+<a href="/player/shuffle">Shuffle</a><br/>
+
+`
+
+var (
+	auth  = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
+	ch    = make(chan *spotify.Client)
+	state = "abc123"
+)
 
 // LivePrefixState Prefix
 var LivePrefixState struct {
@@ -60,46 +81,36 @@ func getCredentials() credential {
 	var c credential
 	err = json.Unmarshal(b, &c)
 	if err != nil {
-		fmt.Println("Failed to unmarshal file: %s\n", err)
+		fmt.Println("Failed to unmarshal file: ", err)
 	}
 	return c
 }
 
-func newSpotifyAuthenticator() spotify.Authenticator {
-	redirectURI := url.URL{Scheme: "http", Host: "localhost:8888", Path: "/spotify"}
-
-	auth := spotify.NewAuthenticator(
-		redirectURI.String(),
-		spotify.ScopeUserReadPrivate,
-		spotify.ScopeUserReadCurrentlyPlaying,
-		spotify.ScopeUserReadPlaybackState,
-		spotify.ScopeUserModifyPlaybackState,
-		spotify.ScopeUserLibraryRead,
-		// Used for Web Playback SDK
-		"streaming",
-		spotify.ScopeUserReadEmail,
-	)
-	credentials := getCredentials()
-	auth.SetAuthInfo(credentials.ClientID, credentials.SecretKey)
-	return auth
-}
-
-var client SpotifyClient
-var spotifyAuthenticator = newSpotifyAuthenticator()
-
 func executor(in string) {
 	in = strings.TrimSpace(in)
-
+	var err error
 	switch in {
 	case "exit":
 		fmt.Println("Bye!")
 		os.Exit(0)
 	case "play":
-
+		err = client.Play()
+	case "pause":
+		err = client.Pause()
+	case "next":
+		err = client.Next()
+	case "previous":
+		err = client.Previous()
+	case "shuffle":
+		playerState.ShuffleState = !playerState.ShuffleState
+		err = client.Shuffle(playerState.ShuffleState)
 	default:
 		LivePrefixState.IsEnable = false
 		LivePrefixState.LivePrefix = in
 		return
+	}
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	LivePrefixState.LivePrefix = in + "> "
@@ -121,6 +132,24 @@ func changeLivePrefix() (string, bool) {
 
 }
 
+func completeAuth(w http.ResponseWriter, r *http.Request) {
+	tok, err := auth.Token(state, r)
+	if err != nil {
+		http.Error(w, "Couldn't get token", http.StatusForbidden)
+		log.Fatal(err)
+	}
+	if st := r.FormValue("state"); st != state {
+		http.NotFound(w, r)
+		log.Fatalf("State mismatch: %s != %s\n", st, state)
+	}
+	// use the token to get an authenticated client
+	client := auth.NewClient(tok)
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, "Login Completed!"+html)
+	fmt.Println("Login Completed!")
+	ch <- &client
+}
+
 func main() {
 	flag.Parse()
 
@@ -128,49 +157,32 @@ func main() {
 		fmt.Printf("%s %s (rev: %s/%s)\n", name, version, revision, runtime.Version())
 		return
 	}
-	var client SpotifyClient
-	var spotifyAuthenticator = newSpotifyAuthenticator()
 
-	authHandler := &web.AuthHandler{
-		Client:        make(chan *spotify.Client),
-		State:         uuid.New().String(),
-		Authenticator: spotifyAuthenticator,
+	// first start an HTTP server
+	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Got request for:", r.URL.String())
+	})
+	go http.ListenAndServe(":8080", nil)
+
+	url := auth.AuthURL(state)
+	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+
+	// wait for auth to complete
+	client = <-ch
+
+	// use the client to make calls that require authorization
+	user, err := client.CurrentUser()
+	if err != nil {
+		log.Fatal(err)
 	}
+	fmt.Println("You are logged in as:", user.ID)
 
-	webSocketHandler := &web.WebsocketHandler{
-		PlayerShutdown:    make(chan bool),
-		PlayerDeviceID:    make(chan spotify.ID),
-		PlayerStateChange: make(chan *web.WebPlaybackState),
+	playerState, err = client.PlayerState()
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	if debugMode {
-		client = player.NewDebugClient()
-		go func() {
-			webSocketHandler.PlayerDeviceID <- "debug"
-		}()
-	} else {
-		var err error
-
-		h := http.NewServeMux()
-		h.Handle("/ws", webSocketHandler)
-		h.Handle("/spotify-cli", authHandler)
-		h.HandleFunc("/player", web.PlayerHandleFunc)
-
-		go func() {
-			log.Fatal(http.ListenAndServe(":8888", h))
-		}()
-
-		err = player.StartRemoteAuthentication(spotifyAuthenticator, authHandler.State)
-		if err != nil {
-			log.Printf("could not get client, shutting down, err: %v", err)
-		}
-	}
-
-	// wait for authentication to complete
-	client = <-authHandler.Client
-
-	// wait for device to be ready
-	webPlayerID := <-webSocketHandler.PlayerDeviceID
+	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 
 	p := prompt.New(
 		executor,
