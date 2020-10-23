@@ -83,6 +83,7 @@ func getCredentials() credential {
 	return c
 }
 
+// TODO: 再生などの実行前に状態確認を入れる (client.PlayerState)
 func executor(in string) {
 	in = strings.TrimSpace(in)
 	var err error
