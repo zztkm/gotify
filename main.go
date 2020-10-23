@@ -104,6 +104,9 @@ func executor(in string) {
 	case "previous":
 		err = client.Previous()
 		LivePrefixState.LivePrefix = "playing > "
+	case "repeat":
+		err = client.Repeat(state)
+		LivePrefixState.LivePrefix = "playing > "
 	case "shuffle":
 		playerState.ShuffleState = !playerState.ShuffleState
 		err = client.Shuffle(playerState.ShuffleState)
@@ -125,6 +128,7 @@ func completer(in prompt.Document) []prompt.Suggest {
 		{Text: "pause", Description: "曲を一時停止するぜ！"},
 		{Text: "next", Description: "次の曲を再生するぜ！"},
 		{Text: "previous", Description: "前の曲を再生するぜ！"},
+		{Text: "repeat", Description: "リピート再生するぜ！"},
 		{Text: "shuffle", Description: "シャッフル設定を切り替えるぜ！"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
