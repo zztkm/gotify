@@ -1,3 +1,3 @@
 # Spotify player
 
-SpotifyをTUIで操作したくない？
+SpotifyをCLIで操作したくない？
