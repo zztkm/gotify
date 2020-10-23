@@ -105,8 +105,8 @@ func executor(in string) {
 		err = client.Previous()
 		LivePrefixState.LivePrefix = "playing > "
 	case "repeat":
-		err = client.Repeat(state)
-		LivePrefixState.LivePrefix = "playing > "
+		//err = client.Repeat(state)
+		//LivePrefixState.LivePrefix = "playing > "
 	case "shuffle":
 		playerState.ShuffleState = !playerState.ShuffleState
 		err = client.Shuffle(playerState.ShuffleState)
