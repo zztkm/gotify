@@ -165,37 +165,34 @@ func main() {
 
 	// first start an HTTP server
 	http.HandleFunc("/gotify", completeAuth)
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Got request for:", r.URL.String())
 	})
-	go func() {
 
-		c := getCredentials()
-		auth.SetAuthInfo(c.ClientID, c.SecretKey)
-		url := auth.AuthURL(state)
-		fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+	c := getCredentials()
+	auth.SetAuthInfo(c.ClientID, c.SecretKey)
+	url := auth.AuthURL(state)
+	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 
-		// wait for auth to complete
-		client = <-ch
+	// wait for auth to complete
+	client = <-ch
 
-		// use the client to make calls that require authorization
-		user, err := client.CurrentUser()
-		if err != nil {
-			log.Fatal(err)
-			os.Exit(1)
-		}
-		fmt.Println("You are logged in as:", user.ID)
+	// use the client to make calls that require authorization
+	user, err := client.CurrentUser()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	fmt.Println("You are logged in as:", user.ID)
 
-		playerState, err = client.PlayerState()
-		if err != nil {
-			log.Fatal(err)
-			os.Exit(1)
-		}
-		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
-	}()
+	playerState, err = client.PlayerState()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 
-	http.ListenAndServe(":7777", nil)
+	go http.ListenAndServe(":7777", nil)
 
 	p := prompt.New(
 		executor,
