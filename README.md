@@ -2,6 +2,12 @@
 
 SpotifyをCLIで操作したくない？
 
+## Installation
+
+```sh
+$ go get github.com/zztkm/go-spotify
+```
+
 ## Usage
 
 まずはセッティング！
