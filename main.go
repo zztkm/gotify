@@ -53,7 +53,7 @@ var LivePrefixState struct {
 }
 
 type credential struct {
-	ClientID  string `json:"clinetID"`
+	ClientID  string `json:"clientID"`
 	SecretKey string `json:"secretKey"`
 }
 
@@ -77,11 +77,13 @@ func getCredentials() credential {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		fmt.Println("Failed to read config file: ", err)
+		os.Exit(1)
 	}
 	var c credential
 	err = json.Unmarshal(b, &c)
 	if err != nil {
 		fmt.Println("Failed to unmarshal file: ", err)
+		os.Exit(1)
 	}
 	return c
 }
@@ -95,8 +97,12 @@ func executor(in string) {
 		os.Exit(0)
 	case "play":
 		err = client.Play()
+		LivePrefixState.LivePrefix = in + "ing > "
+		LivePrefixState.IsEnable = true
 	case "pause":
 		err = client.Pause()
+		LivePrefixState.LivePrefix = in + "d > "
+		LivePrefixState.IsEnable = true
 	case "next":
 		err = client.Next()
 	case "previous":
@@ -111,18 +117,18 @@ func executor(in string) {
 	}
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	LivePrefixState.LivePrefix = in + "> "
-	LivePrefixState.IsEnable = true
 }
 
 func completer(in prompt.Document) []prompt.Suggest {
 	s := []prompt.Suggest{
-		{Text: "users", Description: "Store the username and age"},
-		{Text: "articles", Description: "Store the article text posted by user"},
-		{Text: "comments", Description: "Store the text commented to articles"},
-		{Text: "groups", Description: "Combine users with specific rules"},
+		{Text: "play", Description: "曲を再生するぜ！"},
+		{Text: "pause", Description: "曲を一時停止するぜ！"},
+		{Text: "next", Description: "次の曲を再生するぜ！"},
+		{Text: "previous", Description: "前の曲を再生するぜ！"},
+		{Text: "shuffle", Description: "曲をシャッフル再生するぜ！"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
@@ -137,10 +143,12 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
 		log.Fatal(err)
+		os.Exit(1)
 	}
 	if st := r.FormValue("state"); st != state {
 		http.NotFound(w, r)
 		log.Fatalf("State mismatch: %s != %s\n", st, state)
+		os.Exit(1)
 	}
 	// use the token to get an authenticated client
 	client := auth.NewClient(tok)
@@ -165,6 +173,9 @@ func main() {
 	})
 	go http.ListenAndServe(":8080", nil)
 
+	c := getCredentials()
+	auth.SetAuthInfo(c.ClientID, c.SecretKey)
+	fmt.Println(c.ClientID, ":", c.SecretKey)
 	url := auth.AuthURL(state)
 	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 
@@ -175,12 +186,14 @@ func main() {
 	user, err := client.CurrentUser()
 	if err != nil {
 		log.Fatal(err)
+		os.Exit(1)
 	}
 	fmt.Println("You are logged in as:", user.ID)
 
 	playerState, err = client.PlayerState()
 	if err != nil {
 		log.Fatal(err)
+		os.Exit(1)
 	}
 	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 
