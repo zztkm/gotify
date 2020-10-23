@@ -1,36 +1,36 @@
-# Spotify player
+# Gotify
 
-SpotifyをCLIで操作したくない？
+Gotify is a Spotify player for cli.
 
-## Installation
+Inspired by https://github.com/jbszczepaniak/spotify-cli.
 
-```sh
-$ go get github.com/zztkm/go-spotify
-```
+Note: なんか知らんけど wsl2 環境で動作が異常(まだ原因特定できてない)
+
+## Feature
+
+- play
+- pause
+- next
+- previous
+- shuffle (set shuffle)
 
 ## Usage
 
-まずはセッティング！
+### Require
+1. Premium Spotify Account
+1. Created Spotify Application under https://developer.spotify.com/dashboard/applications (set redirect URI to http://localhost:7777/gotify)
 
-以下のページにアクセスして、自分のアプリケーション(ex. MySpotifyPlayer)
-
-https://developer.spotify.com/my-applications/.
 
 You'll get a client ID and secret key for your application. 
 
-client ID と secret key を下記のように`settings.json`に書き込みます。
+### Installation
 
-UNIX:
+```sh
+$ go get github.com/zztkm/gotify
 ```
-~/.config/spotify/settings.json
-```
+settings.json must be located at `~/.config/gotify/settings.json`.  
+For windows `%APPDATA%\gotify/settings.json`
 
-WINDOWSのコンフィグ配置場所: 
-```
-%APPDATA%\spotify/settings.json
-```
-
-セッティング例: 
 ```json
 {
     "clientID": "sssafdafdfsaf",
@@ -38,4 +38,4 @@ WINDOWSのコンフィグ配置場所:
 }
 ```
 
-あとは実行！`spotify`
+`gotify`
