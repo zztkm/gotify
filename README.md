@@ -16,6 +16,10 @@ Note: なんか知らんけど wsl2 環境で動作が異常(まだ原因特定�
 
 ## Usage
 
+run `gotify` (windows: gotify.exe)
+
+![](./misc/screenshot.png)
+
 ### Require
 1. Premium Spotify Account
 1. Created Spotify Application under https://developer.spotify.com/dashboard/applications (set redirect URI to http://localhost:7777/gotify)
@@ -37,5 +41,3 @@ For windows `%APPDATA%\gotify/settings.json`
     "secretKey": "dafsafasf"
 }
 ```
-
-`gotify`
