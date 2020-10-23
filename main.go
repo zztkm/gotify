@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	name     = "spotify for cli"
+	name     = "gotify"
 	version  = "0.1.0"
 	revision = "HEAD"
 )
 
-const redirectURI = "http://localhost:8080/callback"
+const redirectURI = "http://localhost:4864/gotify"
 
 // We'll want these variables sooner rather than later
 var (
@@ -31,13 +31,8 @@ var (
 )
 
 var html = `
-<br/>
-<a href="/player/play">Play</a><br/>
-<a href="/player/pause">Pause</a><br/>
-<a href="/player/next">Next track</a><br/>
-<a href="/player/previous">Previous Track</a><br/>
-<a href="/player/shuffle">Shuffle</a><br/>
-
+<h1>Gotify is a Spotify player for cli</h1>
+<h2>Go to the terminal and please do not close this tab.</h2>
 `
 
 var (
@@ -63,9 +58,9 @@ func createConfigFileName() string {
 	file := "settings.json"
 
 	if runtime.GOOS == "windows" {
-		file = filepath.Join(os.Getenv("APPDATA"), "spotify", file)
+		file = filepath.Join(os.Getenv("APPDATA"), "gotify", file)
 	} else {
-		file = filepath.Join(os.Getenv("HOME"), ".config", "spotify", file)
+		file = filepath.Join(os.Getenv("HOME"), ".config", "gotify", file)
 	}
 
 	return file
@@ -105,30 +100,32 @@ func executor(in string) {
 		LivePrefixState.IsEnable = true
 	case "next":
 		err = client.Next()
+		LivePrefixState.LivePrefix = "playing > "
 	case "previous":
 		err = client.Previous()
+		LivePrefixState.LivePrefix = "playing > "
 	case "shuffle":
 		playerState.ShuffleState = !playerState.ShuffleState
 		err = client.Shuffle(playerState.ShuffleState)
+		LivePrefixState.LivePrefix = "playing > "
 	default:
 		LivePrefixState.IsEnable = false
 		LivePrefixState.LivePrefix = in
-		return
 	}
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 }
 
 func completer(in prompt.Document) []prompt.Suggest {
 	s := []prompt.Suggest{
+		{Text: "exit", Description: "Gotifyを終了するぜ！"},
 		{Text: "play", Description: "曲を再生するぜ！"},
 		{Text: "pause", Description: "曲を一時停止するぜ！"},
 		{Text: "next", Description: "次の曲を再生するぜ！"},
 		{Text: "previous", Description: "前の曲を再生するぜ！"},
-		{Text: "shuffle", Description: "曲をシャッフル再生するぜ！"},
+		{Text: "shuffle", Description: "シャッフル設定を切り替えるぜ！"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
@@ -167,42 +164,45 @@ func main() {
 	}
 
 	// first start an HTTP server
-	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/gotify", completeAuth)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Got request for:", r.URL.String())
 	})
-	go http.ListenAndServe(":8080", nil)
+	go func() {
 
-	c := getCredentials()
-	auth.SetAuthInfo(c.ClientID, c.SecretKey)
-	fmt.Println(c.ClientID, ":", c.SecretKey)
-	url := auth.AuthURL(state)
-	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+		c := getCredentials()
+		auth.SetAuthInfo(c.ClientID, c.SecretKey)
+		url := auth.AuthURL(state)
+		fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 
-	// wait for auth to complete
-	client = <-ch
+		// wait for auth to complete
+		client = <-ch
 
-	// use the client to make calls that require authorization
-	user, err := client.CurrentUser()
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-	fmt.Println("You are logged in as:", user.ID)
+		// use the client to make calls that require authorization
+		user, err := client.CurrentUser()
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+		fmt.Println("You are logged in as:", user.ID)
 
-	playerState, err = client.PlayerState()
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
+		playerState, err = client.PlayerState()
+		if err != nil {
+			log.Fatal(err)
+			os.Exit(1)
+		}
+		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
+	}()
+
+	http.ListenAndServe(":4864", nil)
 
 	p := prompt.New(
 		executor,
 		completer,
 		prompt.OptionPrefix("> "),
 		prompt.OptionLivePrefix(changeLivePrefix),
-		prompt.OptionPrefixTextColor(prompt.Yellow), // Prefix(ここでは >>>) の色を黄色に変更
+		prompt.OptionPrefixTextColor(prompt.Yellow), // Prefix(ここでは >) の色を黄色に変更
 		prompt.OptionTitle("spotify cli"),
 	)
 	p.Run()
