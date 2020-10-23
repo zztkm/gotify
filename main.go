@@ -169,6 +169,8 @@ func main() {
 		log.Println("Got request for:", r.URL.String())
 	})
 
+	go http.ListenAndServe(":7777", nil)
+
 	c := getCredentials()
 	auth.SetAuthInfo(c.ClientID, c.SecretKey)
 	url := auth.AuthURL(state)
@@ -191,8 +193,6 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
-
-	go http.ListenAndServe(":7777", nil)
 
 	p := prompt.New(
 		executor,
