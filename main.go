@@ -22,7 +22,7 @@ const (
 	revision = "HEAD"
 )
 
-const redirectURI = "http://localhost:4864/gotify"
+const redirectURI = "http://localhost:7777/gotify"
 
 // We'll want these variables sooner rather than later
 var (
@@ -195,7 +195,7 @@ func main() {
 		fmt.Printf("Found your %s (%s)\n", playerState.Device.Type, playerState.Device.Name)
 	}()
 
-	http.ListenAndServe(":4864", nil)
+	http.ListenAndServe(":7777", nil)
 
 	p := prompt.New(
 		executor,

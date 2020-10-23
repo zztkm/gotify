@@ -4,6 +4,8 @@ Gotify is a Spotify player for cli.
 
 Inspired by https://github.com/jbszczepaniak/spotify-cli.
 
+Note: なんか知らんけど wsl2 環境で動作が異常(まだ原因特定できてない)
+
 ## Feature
 
 - play
@@ -14,14 +16,12 @@ Inspired by https://github.com/jbszczepaniak/spotify-cli.
 
 ## Usage
 
-### require
+### Require
 1. Premium Spotify Account
-1. Created Spotify Application under https://beta.developer.spotify.com/dashboard/applications (set redirect URI to http://localhost:8888/gotify)
+1. Created Spotify Application under https://developer.spotify.com/dashboard/applications (set redirect URI to http://localhost:7777/gotify)
 
 
 You'll get a client ID and secret key for your application. 
-
-client ID と secret key を下記のように`settings.json`に書き込みます。
 
 ### Installation
 
