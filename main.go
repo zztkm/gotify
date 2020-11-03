@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/c-bata/go-prompt"
+	"github.com/pkg/browser"
 	"github.com/zmb3/spotify"
 )
 
@@ -179,7 +180,7 @@ func main() {
 	c := getCredentials()
 	auth.SetAuthInfo(c.ClientID, c.SecretKey)
 	url := auth.AuthURL(state)
-	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+	browser.OpenURL(url)
 
 	// wait for auth to complete
 	client = <-ch
