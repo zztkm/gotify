@@ -206,7 +206,7 @@ func main() {
 		prompt.OptionPrefix("> "),
 		prompt.OptionLivePrefix(changeLivePrefix),
 		prompt.OptionPrefixTextColor(prompt.Yellow), // Prefix(ここでは >) の色を黄色に変更
-		prompt.OptionTitle("spotify cli"),
+		prompt.OptionTitle("gotify"),
 	)
 	p.Run()
 }
