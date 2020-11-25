@@ -1,4 +1,4 @@
-module github.com/zztkm/go-spotify
+module github.com/zztkm/gotify
 
 go 1.13
 
